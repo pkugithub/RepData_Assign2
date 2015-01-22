@@ -1,0 +1,135 @@
+---
+title: "Reproducible Research: Peer Assessment 2"
+output:
+  html_document:
+    keep_md: true
+---
+
+## Sypnopsis
+The goal of this data analysis exercise is to answer the following questions:
+
+1. Across the United States, which types of weather events are most harmful with respect to population health?
+
+2. Across the United States, which types of weather events have the greatest economic consequences?
+
+## Data
+The data used in this analysis is available below:
+
+* [Storm Data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2)
+
+There is also some documentation of the database available. Here you will find how some of the variables are constructed/defined:
+
+* National Weather Service [Storm Data Documentation](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf)
+
+* National Climatic Data Center Storm Events [FAQ](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2FNCDC%20Storm%20Events-FAQ%20Page.pdf)
+
+The events in the database start in the year 1950 and end in November 2011. In the earlier years of the database there are generally fewer events recorded, most likely due to a lack of good records. More recent years should be considered more complete.  (TODO) In the Data Procession section, I will discuss the strategy and implementation for dealing with the relatively lacking of good records in the earlier years.
+
+In addition, the documentations cited above leave much to be desired in terms of clear semantics and interpretation of the contents of the data file.  In the Data Processing section, I'll go into details of what those gaps are and how I deal with them.
+
+## Data Processing
+This section describes the strategy, rationale, and implemention of the data processing and analysis.
+
+
+### Load the Data into R
+Let's load the data into a dataframe first:
+```{r}
+url="https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+dest="repdata-data-StormData.csv.bz2"
+# download.file(url, destfile=dest, method="curl")
+
+# -- # install.packages("R.utils")  # you should install R.utils before running this markdown file.
+library(R.utils)
+
+# bunzip2(dest, overwrite=TRUE, remove=FALSE)
+df1 <- read.csv("repdata-data-StormData.csv", stringsAsFactors=F)
+df1[1,]
+```
+
+### Data Cleansing and Preprocessing
+This section performs various preprocessing on the dataset.
+
+#### NA Verification
+
+The columns FATALITIES, INJURIES and PROPDMG contain the quanties germane to the analysis we want to perform.  Code below verifies there are no missing/NA values in these columns:
+
+```{r}
+sum(is.na(df1$FATALITIES))
+sum(is.na(df1$INJURIES))
+sum(is.na(df1$PROPDMG))
+```
+
+#### Append the year column
+BGN_DATE column contains the beginning date of each of the storm events in the dataframe.  It is a string in the format of "MM/DD/yyyy hh:mm:ss".   Let's extract the year portion from the string and append that info as a new column.  We'll be doing some comparison/analysis/verification based on a year-to-year basis.
+
+```{r}
+df1$year = sub(".*/.*/(.*) .*", "\\1", df1$BGN_DATE) 
+```
+
+#### Normalize Property Damange Quantity
+Below is an excerpt from Section 2.7, Damange in [Storm Data Documentation](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf):
+
+*Estimates should be rounded to three significant digits, followed by an alphabetical character signifying the magnitude of the number, i.e., 1.55B for $1,550,000,000. Alphabetical characters used to signify magnitude include “K” for thousands, “M” for millions, and “B” for billions. *
+
+However, in PROPDMGEXP column, in addition to characters such as M/m, K, H/h, B, you can also find other characters as shown below:
+
+```{r}
+table(df1$PROPDMGEXP)
+```
+
+(BTW, I cannot find any documentation indicating PROPDMGEXP is the indicator of "the magnitude of the number" -- it is an educated guess as to what that column represents.)
+
+```{r}
+n_total <- nrow(df1)
+n_total
+n_subset <- nrow(df1[toupper(df1$PROPDMGEXP) %in% c('B','M','K','H'), ])
+n_subset
+n_subset / n_total
+```
+
+The ratio above (ie, n_subset/n_total) indicates about half of the data points have a defined indicator (ie, B, M, K, or H - case-insensitive).
+
+Turning our attention to the other rows (that is, those rows without any indicator or with an indicator that is NOT one of the above defined ones):
+
+First, for those rows with an empty PROPDMGEXP, we see that most of them have 0 as the PROPDMG:
+```{r}
+n_total2 <- nrow(df1[df1$PROPDMGEXP=='', ])
+n_total2
+n_subset2 <- nrow(df1[df1$PROPDMGEXP=='' & df1$PROPDMG == 0.0, ])
+n_subset2
+n_subset2 / n_total2
+```
+
+Given the stats above, for this analysis, we will treat rows with a PROPDMGEXP of '' (ie, emptry string) are those with an undefined property damage amount.
+
+Second, regarding those rows with an imprecise indicator (e.g, -, +, ?, 0-8): after reviewing some of those rows (including the REMARKS column), there does not appear to be any strong indication what those indicators mean.  Therefore, for in this analysis, we will treat the property damage amount for those rows as undefined as well.   This should not skew our analysis too greatly as the number of these rows is insignificant.
+
+Below we will add a column called propdmg_norm (in dollars) to the data set based on the decisions we made above:
+
+```{r}
+compute_propdmg_norm <- function(val, indicator) {
+  if (toupper(indicator) == 'B') {
+    retval <- val * 10^9
+  } else if (toupper(indicator) == 'M' ) {
+    retval <- val * 10^6
+  } else if (toupper(indicator) == 'K' ) {
+    retval <- val * 10^3
+  } else if (toupper(indicator) == 'H' ) {
+    retval <- val * 10^2
+  } else {
+    retval <- NA
+  }
+  retval
+}
+
+df1$propdmg_norm <- mapply(compute_propdmg_norm, df1$PROPDMG, df1$PROPDMGEXP)
+
+```
+
+
+### Data Analysis 
+
+## Results
+
+
+
