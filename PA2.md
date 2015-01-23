@@ -1,9 +1,4 @@
----
-title: "Reproducible Research: Peer Assessment 2"
-output:
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 2
 
 ## Sypnopsis
 The goal of this data analysis exercise is to answer the following questions:
@@ -35,7 +30,8 @@ This section describes the strategy, rationale, and implemention of the data pro
 
 ### Load the Data into R
 Let's load the data into a dataframe first:
-```{r message=FALSE}
+
+```r
 # -- # install.packages("R.utils")  # you should install R.utils before running this markdown file.
 library(R.utils)
 
@@ -56,16 +52,36 @@ This section performs various preprocessing on the dataset.
 The columns FATALITIES, INJURIES and PROPDMG contain the key quantities used in the analysis.
 Code below verifies there are no missing/NA values in these columns:
 
-```{r warning=FALSE}
+
+```r
 sum(is.na(df1$FATALITIES))
+```
+
+```
+## [1] 0
+```
+
+```r
 sum(is.na(df1$INJURIES))
+```
+
+```
+## [1] 0
+```
+
+```r
 sum(is.na(df1$PROPDMG))
+```
+
+```
+## [1] 0
 ```
 
 #### Append the year column
 BGN_DATE column contains the beginning date of each of the storm events in the dataframe.  It is a string in the format of "MM/DD/yyyy hh:mm:ss".   Let's extract the year portion from the string and append that info as a new column.  We'll be doing some comparison/analysis/verification based on a year-to-year basis.
 
-```{r}
+
+```r
 df1["year"] <- as.integer(sub(".*/.*/(.*) .*", "\\1", df1$BGN_DATE) )
 ```
 
@@ -76,31 +92,78 @@ Below is an excerpt from Section 2.7, Damange in [Storm Data Documentation](http
 
 However, in PROPDMGEXP column, in addition to characters such as M/m, K, H/h, B, you can also find other characters as shown below:
 
-```{r}
+
+```r
 table(df1["PROPDMGEXP"])
+```
+
+```
+## 
+##             -      ?      +      0      1      2      3      4      5 
+## 465934      1      8      5    216     25     13      4      4     28 
+##      6      7      8      B      h      H      K      m      M 
+##      4      5      1     40      1      6 424665      7  11330
 ```
 
 (BTW, I cannot find any documentation indicating PROPDMGEXP is the indicator of "the magnitude of the number" -- it is an educated guess as to what that column represents.)
 
 The ratio below (ie, n_subset/n_total) indicates about half of the data points have a defined indicator (ie, B, M, K, or H - case-insensitive).
 
-```{r}
+
+```r
 n_total <- nrow(df1)
 n_total
+```
+
+```
+## [1] 902297
+```
+
+```r
 n_subset <- nrow(df1[toupper(df1$PROPDMGEXP) %in% c('B','M','K','H'), ])
 n_subset
+```
+
+```
+## [1] 436049
+```
+
+```r
 n_subset / n_total
+```
+
+```
+## [1] 0.4832655
 ```
 
 Turning our attention to the other rows (that is, those rows without any indicator or with an indicator that is NOT one of the above defined ones):
 
 First, for those rows with an empty PROPDMGEXP, we see that most of them have 0 as the PROPDMG:
-```{r}
+
+```r
 n_total2 <- nrow(df1[df1$PROPDMGEXP=='', ])
 n_total2
+```
+
+```
+## [1] 465934
+```
+
+```r
 n_subset2 <- nrow(df1[df1$PROPDMGEXP=='' & df1$PROPDMG == 0.0, ])
 n_subset2
+```
+
+```
+## [1] 465858
+```
+
+```r
 n_subset2 / n_total2
+```
+
+```
+## [1] 0.9998369
 ```
 
 Given the stats above, for this analysis, we will treat rows with an empty string for PROPDMGEXP as having an undefined property damage amount.
@@ -109,7 +172,8 @@ Second, regarding those rows with an imprecise indicator (e.g, -, +, ?, 0-8): af
 
 Below we will add a column called propdmg_norm (in dollars) to the data set based on the decisions we made above:
 
-```{r}
+
+```r
 compute_propdmg_norm <- function(val, indicator) {
   if (toupper(indicator) == 'B') {
     retval <- val * 10^9
@@ -132,8 +196,13 @@ df1["propdmg_norm"] <- mapply(compute_propdmg_norm, df1$PROPDMG, df1$PROPDMGEXP)
 
 #### Normalize Event Type
 The code below counts the total number of distinct EVTYPE values (case-insensitive) in the entire dataset:
-```{r}
+
+```r
  length(sort(unique(toupper(df1$EVTYPE))))
+```
+
+```
+## [1] 898
 ```
 
 The resulting count is much higher than the number of Storm Data Event type defined in section 2.1.1, Storm Data Event Table in [Storm Data Documentation](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf).
@@ -143,8 +212,25 @@ One thing we could do is map all the distinct EVTYPEs in the input dataset to th
 #### Effect of number of data samples from different years
 
 The code below produces a plot showing the number of data points from each year:
-```{r}
+
+```r
 library(dplyr)
+```
+
+```
+## 
+## Attaching package: 'dplyr'
+## 
+## The following object is masked from 'package:stats':
+## 
+##     filter
+## 
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+```
+
+```r
 library(ggplot2)
 
 summary1 <- df1 %>% group_by(year) %>%
@@ -152,11 +238,14 @@ summary1 <- df1 %>% group_by(year) %>%
 ggplot(summary1, aes(x=year,y=cnt)) + geom_point() + geom_line()
 ```
 
+![](PA2_files/figure-html/unnamed-chunk-9-1.png) 
+
 Specifically, prior to year 1989, the number of data points per year is less than 10,000.
 
 The code below produces a plot showing the number of health damage (for the purpose of this analysis, this is equal to the number of FATALITIES plus INJURIES from the dataset), from each year:
 
-```{r}
+
+```r
 summary_hdmg <- df1 %>% group_by(year) %>%
   mutate(hdmg = FATALITIES + INJURIES) %>%
   summarise(sum_hdmg = sum(hdmg) )
@@ -164,9 +253,12 @@ summary_hdmg <- df1 %>% group_by(year) %>%
 ggplot(summary_hdmg, aes(x=year,y=sum_hdmg)) + geom_point() + geom_line()
 ```
 
+![](PA2_files/figure-html/unnamed-chunk-10-1.png) 
+
 The code below produces a plot showing the total property damage amount (in millions of dollars) from each year:
 
-```{r}
+
+```r
 summary_pdmg <- df1 %>% 
   filter(! is.na(propdmg_norm)) %>%
   group_by(year) %>%
@@ -175,10 +267,15 @@ summary_pdmg <- df1 %>%
 ggplot(summary_pdmg, aes(x=year,y=sum_pdmg)) + geom_point() + geom_line()
 ```
 
+![](PA2_files/figure-html/unnamed-chunk-11-1.png) 
+
 Same data, except that the total property damage amount is plotted on the log10 scale:
-```{r}
+
+```r
 ggplot(summary_pdmg, aes(x=year,y=sum_pdmg)) + geom_point() + geom_line() + scale_y_log10()
 ```
+
+![](PA2_files/figure-html/unnamed-chunk-12-1.png) 
 
 What observations regarding the dataset can we make from the plots above:
 
@@ -208,21 +305,36 @@ Since we are interested in data points that cause property damange and/or health
 1. The row is from year is 1985 or later
 2. The row contains one or more of the following: (1) PROPDMB > 0, (2) FATALITIES > 0, (3) INJURIES > 0
 
-```{r}
+
+```r
 df2 <- df1[df1$year >= 1985 & (df1$PROPDMG+df1$FATALITIES+df1$INJURIES >0),]
 ```
 
 #### Normalize event types in the subset
 The code below shows the number of unique EVTYPE in the subset.  
-```{r}
+
+```r
 evtype_list <- sort(unique(df2$EVTYPE))
 length(evtype_list)
+```
+
+```
+## [1] 467
+```
+
+```r
 head(evtype_list)
+```
+
+```
+## [1] "   HIGH SURF ADVISORY" " FLASH FLOOD"          " TSTM WIND"           
+## [4] " TSTM WIND (G45)"      "?"                     "APACHE COUNTY"
 ```
 
 After visually inspecting the unique EVTYPE values in the subset, the mapping of those values to the event types defined in the documentation Storm Data is accomplished by the code below:
 
-```{r}
+
+```r
 df_mapping <- as.data.frame(rbind(
 c("Astronomical Low Tide", '^ASTRONOMICAL LOW TIDE' ),
 c("Avalanche", '^AVALANC' ),
@@ -282,8 +394,18 @@ for (i in 1:nrow(df_mapping)) {
 }
 
 dim(df2)
-dim(df2[ is.na(df2$evtype_norm),])
+```
 
+```
+## [1] 227578     40
+```
+
+```r
+dim(df2[ is.na(df2$evtype_norm),])
+```
+
+```
+## [1] 1473   40
 ```
 Notes:
 
@@ -297,7 +419,8 @@ At this point we have cleaned up / normalized the data to the point we can proce
 ### Events That Cause the Most Population Health Damage
 
 Following code computes the health damage grouped by evtype_norm, ordered by total health damange, with top 15 evtype_norm displayed.  The data used starts from 1985 to the latest data available in the dataset:
-```{r}
+
+```r
 df2 %>% group_by(evtype_norm) %>%
   mutate(hdmg = FATALITIES + INJURIES) %>%
   summarise(sum_hdmg = sum(hdmg), cnt = n(), avg_hdmg = sum(hdmg) / n() ) %>%
@@ -306,8 +429,30 @@ df2 %>% group_by(evtype_norm) %>%
   head(15)
 ```
 
+```
+## Source: local data frame [15 x 4]
+## 
+##            evtype_norm sum_hdmg    cnt    avg_hdmg
+## 1              Tornado    33530  18559  1.80667062
+## 2    Thunderstorm Wind     9793 118157  0.08288125
+## 3       Excessive Heat     8731    715 12.21118881
+## 4                Flood     7310  10534  0.69394342
+## 5            Lightning     6049  13233  0.45711479
+## 6                 Heat     3612    246 14.68292683
+## 7          Flash Flood     2803  21230  0.13203015
+## 8            Ice Storm     2071    714  2.90056022
+## 9            High Wind     1901   6337  0.29998422
+## 10            Wildfire     1696   1200  1.41333333
+## 11        Winter Storm     1570   1508  1.04111406
+## 12 Hurricane (Typhoon)     1468    230  6.38260870
+## 13                Hail     1300  23217  0.05599345
+## 14          Heavy Snow     1294   1515  0.85412541
+## 15           Dense Fog     1158    182  6.36263736
+```
+
 In order to evaluate wether skewness was introduced by the EVTYPE-to-evtype_norm mapping, the same logic is used below to compute the health damange -- but this time grouped by the original EVTYPE:
-```{r}
+
+```r
 df2 %>% group_by(EVTYPE) %>%
   mutate(hdmg = FATALITIES + INJURIES) %>%
   summarise(sum_hdmg = sum(hdmg), cnt = n(), avg_hdmg = sum(hdmg) / n() ) %>%
@@ -316,14 +461,57 @@ df2 %>% group_by(EVTYPE) %>%
   head(15)
 ```
 
+```
+## Source: local data frame [15 x 4]
+## 
+##               EVTYPE sum_hdmg   cnt    avg_hdmg
+## 1            TORNADO    33487 18544  1.80581320
+## 2     EXCESSIVE HEAT     8428   697 12.09182209
+## 3              FLOOD     7259  9829  0.73852884
+## 4          TSTM WIND     7077 62106  0.11395034
+## 5          LIGHTNING     6046 13223  0.45723361
+## 6               HEAT     3037   212 14.32547170
+## 7        FLASH FLOOD     2755 20879  0.13195076
+## 8          ICE STORM     2064   708  2.91525424
+## 9  THUNDERSTORM WIND     1621 43459  0.03729952
+## 10      WINTER STORM     1527  1506  1.01394422
+## 11         HIGH WIND     1385  5504  0.25163517
+## 12 HURRICANE/TYPHOON     1339    71 18.85915493
+## 13              HAIL     1300 23201  0.05603207
+## 14        HEAVY SNOW     1148  1335  0.85992509
+## 15          WILDFIRE      986   816  1.20833333
+```
+
 ### Events That Cause the Most Property Damage
 Following code computes the property damange amounts grouped by evtype_norm, ordered by total health damange, with top 15 evtype_norm displayed.  The data used starts from 1985 to the latest data available in the dataset:
-```{r}
+
+```r
 df2 %>% group_by(evtype_norm) %>%
   summarise(sum_pdmg = sum(propdmg_norm, na.rm = T), cnt = n(), avg_pdmg = sum(propdmg_norm, na.rm =T) / n() ) %>%
   select(evtype_norm, sum_pdmg, cnt, avg_pdmg) %>%
   arrange(desc(sum_pdmg)) %>%
   head(15)
+```
+
+```
+## Source: local data frame [15 x 4]
+## 
+##            evtype_norm     sum_pdmg    cnt     avg_pdmg
+## 1                Flood 150327927600  10534  14270735.49
+## 2  Hurricane (Typhoon)  85356410010    230 371114826.13
+## 3     Storm Surge/Tide  47965224000    225 213178773.33
+## 4              Tornado  37998400210  18559   2047437.91
+## 5          Flash Flood  16732868610  21230    788170.92
+## 6                 Hail  15974470220  23217    688050.58
+## 7    Thunderstorm Wind  10968253230 118157     92827.79
+## 8             Wildfire   8491563500   1200   7076302.92
+## 9       Tropical Storm   7714390550    410  18815586.71
+## 10        Winter Storm   6748997250   1508   4475462.37
+## 11           High Wind   6014993410   6337    949186.27
+## 12           Ice Storm   3948927860    714   5530711.29
+## 13          Heavy Rain   3223348190   1073   3004052.37
+## 14             Drought   1046106000     55  19020109.09
+## 15          Heavy Snow    975754690   1515    644062.50
 ```
 
 In order to evaluate wether skewness was introduced by the EVTYPE-to-evtype_norm mapping, the same logic is used below to compute the health damange -- but this time grouped by the original EVTYPE:
