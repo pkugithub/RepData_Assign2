@@ -1,5 +1,5 @@
 ---
-title: "Reproducible Research: Peer Assessment 2"
+title: "Assessing Damages to Population and Properties Caused By Various Weather Events"
 output:
   html_document:
     keep_md: true
@@ -25,13 +25,12 @@ There is also some documentation of the database available. Here you will find h
 
 The events in the database start in the year 1950 and end in November 2011. In the earlier years of the database there are generally fewer events recorded, most likely due to a lack of good records. More recent years should be considered more complete.  
 
-(TODO) In the Data Procession section, I will discuss the strategy and implementation for dealing with the relatively lacking of good records in the earlier years.
+In the Data Procession section, I will discuss the strategy and implementation for dealing with the relatively lacking of good records in the earlier years.
 
-In addition, the documentations cited above leave much to be desired in terms of clear semantics and interpretation of the contents of the data file.  In the Data Processing section, I'll go into details of what those gaps are and how I deal with them.
+In addition, the documentations cited above leave much to be desired in terms of clear semantics and interpretation of the contents of the data file (ie, lacking a good **codebook**, in Data Science jargon).  In the Data Processing section, I'll go into details of what those gaps are and how I cleanse/normalize the datd.
 
 ## Data Processing
 This section describes the strategy, rationale, and implemention of the data processing and analysis.
-
 
 ### Load the Data into R
 Let's load the data into a dataframe first:
@@ -41,14 +40,14 @@ library(R.utils)
 
 url="https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
 dest="repdata-data-StormData.csv.bz2"
-# download.file(url, destfile=dest, method="curl")
-# bunzip2(dest, overwrite=TRUE, remove=FALSE)
+download.file(url, destfile=dest, method="curl")
+bunzip2(dest, overwrite=TRUE, remove=FALSE)
 df1 <- read.csv("repdata-data-StormData.csv", stringsAsFactors=F)
 
-# df1 <- read.csv("tmp.csv", stringsAsFactors=F)  # smaller data set for debugging
+# df1 <- read.csv("tmp.csv", stringsAsFactors=F)  # smaller data set for development/debugging
 ```
 
-### Data Cleansing and Preprocessing
+### Data Cleansing and Processing
 This section performs various preprocessing on the dataset.
 
 #### NA Verification
@@ -62,8 +61,8 @@ sum(is.na(df1$INJURIES))
 sum(is.na(df1$PROPDMG))
 ```
 
-#### Append the year column
-BGN_DATE column contains the beginning date of each of the storm events in the dataframe.  It is a string in the format of "MM/DD/yyyy hh:mm:ss".   Let's extract the year portion from the string and append that info as a new column.  We'll be doing some comparison/analysis/verification based on a year-to-year basis.
+#### Append the "year"" column
+BGN_DATE column contains the beginning date of each of the storm events in the dataframe.  It is a string in the format of "MM/DD/yyyy hh:mm:ss".   Let's extract the year portion from the string and append that info as a new column named "year".  The analysis/aggregation to be performed later will be done a year-to-year basis.
 
 ```{r}
 df1["year"] <- as.integer(sub(".*/.*/(.*) .*", "\\1", df1$BGN_DATE) )
@@ -296,7 +295,10 @@ At this point we have cleaned up / normalized the data to the point we can proce
 
 ### Events That Cause the Most Population Health Damage
 
-Following code computes the health damage grouped by evtype_norm, ordered by total health damange, with top 15 evtype_norm displayed.  The data used starts from 1985 to the latest data available in the dataset:
+Following code computes the health damage grouped by evtype_norm, ordered by total health damange, with top 15 evtype_norm displayed.  The data used starts from 1985 to the latest data available in the dataset.
+
+Column **sum_hdmg** shows the total number fatalities and injuries for each event type for the specified time period.   Column **cnt** shows the number of events for a given event type for the specified time period.  Column **avg_hdmg** is simply **sum_hdmg/cnt**:
+
 ```{r}
 df2 %>% group_by(evtype_norm) %>%
   mutate(hdmg = FATALITIES + INJURIES) %>%
@@ -316,23 +318,37 @@ df2 %>% group_by(EVTYPE) %>%
   head(15)
 ```
 
+Based on these results, we can answer the question "Across the United States, which types of weather events are most harmful with respect to population health?" as follows (for the time period between 1985 to 2011, latter being the most recent year available in the input data) :
+
+* Weather event **Tornado** results in the most fatalities and injuries combined.
+* **Thunderstorm Wind** is ranked number #2 on the list.  Note that the number of events of this type is much more frequent than other types of events; therefore, although per-event health damage count is low, the high number of occurrences propel this event result in high aggregate health dmanage count.
+
+we can state that, given the data we used, between 1985 and the most recent year in the input data, the weather event **Flood** results in the most property damange
+
+
 ### Events That Cause the Most Property Damage
-Following code computes the property damange amounts grouped by evtype_norm, ordered by total health damange, with top 15 evtype_norm displayed.  The data used starts from 1985 to the latest data available in the dataset:
+Following code computes the property damange amounts grouped by evtype_norm, ordered by total health damange, with top 15 evtype_norm displayed.  The data used starts from 1985 to the latest data available in the dataset.  
+
+Column **sum_pdmg** shows the total property damage (in dollars) for each event type for the specified time period.   Column **cnt** shows the number of events for a given event type for the specified time period.  Column **avg_pdmg** is simply **sum_pdmg/cnt**:
+
 ```{r}
 df2 %>% group_by(evtype_norm) %>%
   summarise(sum_pdmg = sum(propdmg_norm, na.rm = T), cnt = n(), avg_pdmg = sum(propdmg_norm, na.rm =T) / n() ) %>%
   select(evtype_norm, sum_pdmg, cnt, avg_pdmg) %>%
-  arrange(desc(sum_pdmg)) %>%
-  head(15)
+  arrange(desc(sum_pdmg))
 ```
 
-In order to evaluate wether skewness was introduced by the EVTYPE-to-evtype_norm mapping, the same logic is used below to compute the health damange -- but this time grouped by the original EVTYPE:
+In order to evaluate wether skewness was introduced by the EVTYPE-to-evtype_norm mapping, the same logic is used below to compute the health damange -- but this time grouped by the original EVTYPE.
+
 ```{R}
 df2 %>% group_by(EVTYPE) %>%
   summarise(sum_pdmg = sum(propdmg_norm, na.rm = T), cnt = n(), avg_pdmg = sum(propdmg_norm, na.rm =T) / n() ) %>%
   select(EVTYPE, sum_pdmg, cnt, avg_pdmg) %>%
-  arrange(desc(sum_pdmg)) %>%
-  head(15)
+  arrange(desc(sum_pdmg))
 ```
 
+Based on these results, we can answer the question "Across the United States, which types of weather events have the greatest economic consequences?" as follows (for the time period between 1985 to 2011, latter being the most recent year available in the input data) :
+
+* Weather event **Flood** results in the most property damage as measured in dollars.
+* **Hurricane (Typhoon)** and **Storm Surge/Tide** have very high per-event property damage amount.  Therefore, even with low number of occurrences, their total property damage in the specified time frame propel them to the #2 and #3 spots, respectively.
 
