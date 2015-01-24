@@ -1,0 +1,31 @@
+Indefinite Codebook 
+
+repdata-peer2_doc-pd01016005curr.pdf provides narratives describing
+the contents of the Storm Ddata file.  However, the narratives are not
+precise in terms of the following:
+- synonyms
+- property damange manginitude indicator semantics
+
+"Estimates can be obtained from emergency managers, U.S. Geological Survey, U.S. Army Corps of Engineers, power utility companies, and newspaper articles. If the values provided are rough estimates, then this should be stated as such in the narrative. Estimates should be rounded to three significant digits, followed by an alphabetical character signifying the magnitude of the number, i.e., 1.55B for $1,550,000,000. Alphabetical characters used to signify magnitude include “K” for thousands, “M” for millions, and “B” for billions. If additional precision is available, it may be provided in the narrative part of the entry. When damage is due to more than one element of the storm, indicate, when possible, the amount of damage caused by each element. If the dollar amount of damage is unknown, or not available, check the “no information available” box."
+
+...
+2.1.1 Storm Data Event Table
+
+Astronomical Low Tide Z Avalanche Z Blizzard Z Coastal Flood Z Cold/Wind Chill Z Debris Flow C Dense Fog Z Dense Smoke Z Drought Z Dust Devil C Dust Storm Z Excessive Heat Z Extreme Cold/Wind Chill Z Flash Flood C Flood C Frost/Freeze Z Funnel Cloud C Freezing Fog Z Hail C Heat Z Heavy Rain C Heavy Snow Z High Surf Z High Wind Z
+
+Hurricane (Typhoon) Z Ice Storm Z Lake-Effect Snow Z Lakeshore Flood Z Lightning C Marine Hail M Marine High Wind M Marine Strong Wind M Marine Thunderstorm Wind M Rip Current Z Seiche Z Sleet Z Storm Surge/Tide Z Strong Wind Z Thunderstorm Wind C Tornado C Tropical Depression Z Tropical Storm Z Tsunami Z V olcanic Ash Z Waterspout M Wildfire Z Winter Storm Z Winter Weather Z
+
+..
+"undocumented" event type (and their synonyms)
+-BLACK ICE
+-BLOWING SNOW 
+-BRUSH FIRE
+-COASTAL STORM
+-DROWNING
+-DRY MICROBURST
+ 
+
+
+
+....
+1985 - year of transition in terms number of data points

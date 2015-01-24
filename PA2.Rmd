@@ -91,7 +91,7 @@ n_subset
 n_subset / n_total
 ```
 
-Turning our attention to the other rows (that is, those rows without any indicator or with an indicator that is NOT one of the above defined ones):
+Turning our attention to the other rows (that is, those rows whose PROPDMGEXP value is an empty (ie, zero-length) character string or contains an indicator character that is NOT one of the above defined ones):
 
 First, for those rows with an empty PROPDMGEXP, we see that most of them have 0 as the PROPDMG:
 ```{r}
@@ -106,7 +106,7 @@ Given the stats above, for this analysis, we will treat rows with an empty strin
 
 Second, regarding those rows with an imprecise indicator (e.g, -, +, ?, 0-8): after reviewing some of those rows (including their REMARKS column values), there does not appear to be any strong indication what those indicators mean.  Therefore, for this analysis, we will treat the property damage amount for those rows as undefined as well.   This should not skew our analysis too greatly as the number of these rows is insignificant.
 
-Below we will add a column called propdmg_norm (in dollars) to the data set based on the decisions we made above:
+Below we will add a column called propdmg_norm to the data set based on the decisions we made above.  This represents the 'normalized' property damage amount in dollars for each data point:
 
 ```{r}
 compute_propdmg_norm <- function(val, indicator) {
@@ -125,8 +125,6 @@ compute_propdmg_norm <- function(val, indicator) {
 }
 
 df1["propdmg_norm"] <- mapply(compute_propdmg_norm, df1$PROPDMG, df1$PROPDMGEXP)
-
-# head(df1[,c("EVTYPE", "PROPDMG", "PROPDMGEXP", "propdmg_norm")])
 ```
 
 #### Normalize Event Type
@@ -137,7 +135,7 @@ The code below counts the total number of distinct EVTYPE values (case-insensiti
 
 The resulting count is much higher than the number of Storm Data Event type defined in section 2.1.1, Storm Data Event Table in [Storm Data Documentation](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf).
 
-One thing we could do is map all the distinct EVTYPEs in the input dataset to the ones defined in Storm Data Event Table.  However, that is a lot of work.   Instead, the approach this analysis will take is to filter the data set by the health damage (and later by property damange).   The result of filtering will be a lot less rows than the original dataset.  Hopefully the number of distinct EVTYPEs in those subsets would also be much less, which would reduce the work of mapping.
+One thing we could do is map all the distinct EVTYPEs in the input dataset to the ones defined in Storm Data Event Table.  However, that is a lot of work, and not to mention that there is no definitely instructions/documentation on how this mapping should be done.   Instead, the approach this analysis will take is to subset the data set so that we only look at records that have health damage and/or property damange.   The result of this subsetting will contain a lot less rows than the original dataset.  Hopefully the number of distinct EVTYPEs in those subsets would also be much less, which would reduce the work of mapping.
 
 #### Effect of number of data samples from different years
 
@@ -163,7 +161,7 @@ summary_hdmg <- df1 %>% group_by(year) %>%
 ggplot(summary_hdmg, aes(x=year,y=sum_hdmg)) + geom_point() + geom_line()
 ```
 
-The code below produces a plot showing the total property damage amount (in millions of dollars) from each year:
+The code below produces a plot showing the total property damage amount (in millions of dollars) from each year (with the damage amount plotted in the log10() scale):
 
 ```{r}
 summary_pdmg <- df1 %>% 
@@ -171,11 +169,6 @@ summary_pdmg <- df1 %>%
   group_by(year) %>%
   summarise(sum_pdmg = sum(propdmg_norm) / 10^6)
 
-ggplot(summary_pdmg, aes(x=year,y=sum_pdmg)) + geom_point() + geom_line()
-```
-
-Same data, except that the total property damage amount is plotted on the log10 scale:
-```{r}
 ggplot(summary_pdmg, aes(x=year,y=sum_pdmg)) + geom_point() + geom_line() + scale_y_log10()
 ```
 
@@ -183,21 +176,21 @@ What observations regarding the dataset can we make from the plots above:
 
 1. The number of data points per year is higher in recent years than earlier years.
 2. The health damage shows only a slight increasing trend in the time span covered by the dataset, albeit certain years show significantly worse health damage (using 5000 as the threshold).
-3. The property damange mount increases in an exponential mannger.  The document implies the dollar amount are 'actual dollar amounts' (Section 2.7, Damange), so it's reasonable to assume the amounts are not inflation adjusted.
+3. The property damange mount increases in an exponential manner.  The document Storm Data Documentation implies the dollar amount are 'actual dollar amounts' (Section 2.7, Damange), so it's reasonable to assume the amounts are not inflation-adjusted.
 
 Given these observations, one might raise the following questions:
 
 * What factors contribute to the fact that there are more data points in recent years?  Possible factors:
-  + Better record keeping
-  + Worsening climate conditions
-* What can explain the fairly steady health damange amount, given that there is a general, steady increase in data points from year to year?
-  + Better protection against inclimate weather conditions?
-  + Several weather conditions cause a similar amount of health damange from year to year that technology has not been able to prevent more effectively yet.
+    + Better record keeping 
+    + Worsening climate conditions
+* What can explain the fairly steady health damange amount, given that there is a general, steady increase in the number of data points from year to year?
+    + Better protection against inclimate weather conditions?
+    + Technology for preventing fatalities and injuries have not improved significantly over the years and the rate of severe weather conditions which results in fatalities and/or injuries has not changed significantly
 * What can explain the exponential increase in property damage amount?
-  + Inflation?
-  + More data points per year?
+    + Inflation?
+    + More data points per year?
 
-To reduce the influence of the factors not directly related to the weather conditions, this analysis will use data from 1985 and onward.  This should reduce the effect of the apparent worse record keeping in prior years.   This should also reduce the inflation effect (assuming that is a factor).
+To reduce the influence of the factors not directly related to the weather conditions, this analysis will use data from 1985 and onward.  This should reduce the effect of the apparent worse record keeping in prior years.   This should also reduce the inflation effect (assuming that is a factor).  However, in this particular report, we will not attempt to perform deep analysis on the questions listed above.
 
 ### Data Analysis
 
